@@ -96,12 +96,13 @@ cols_to_test <- c(
 mcs_formulae <- cols_to_test |>
   map(\(outcome) Formula::as.Formula(
     glue::glue(
-      "Dwb_mcs ~ 0 + {outcome} | Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
+      "Dwb_mcs ~ 0 + {outcome} | {other_cols} + Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
     Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
     UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
     Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
     Dwb_mcs_L1 + Dwb_pcs_L1 + Dgn + Dag + Dag_sq + Deh_c3_Medium +
-    Deh_c3_Low + Year_transformed"
+    Deh_c3_Low + Year_transformed",
+    other_cols = paste(cols_to_test[cols_to_test != outcome], collapse = " + ")
     )
   ))
 

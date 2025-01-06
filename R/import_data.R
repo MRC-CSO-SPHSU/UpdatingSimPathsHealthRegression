@@ -5,6 +5,11 @@ library(haven)
 # Check estimate directions make sense
 # Test whether odds between levels are equivalent
 
+cols <- read_dta('T:/projects/HEED/DataAnalysis/hfcovid_analysis.dta', n_max = 100)
+
+# cols |> select(
+#   
+# )
 
 data <- read_dta('T:/projects/HEED/DataAnalysis/hfcovid_analysis.dta',
                  col_select = c(pidp, hidp, wave,
@@ -15,7 +20,8 @@ data <- read_dta('T:/projects/HEED/DataAnalysis/hfcovid_analysis.dta',
                                 intdaty_dv,
                                 scghq1_dv,
                                 econ_benefits, home_owner, mastat_dv, dnc, ydses_c5, dlltsd,
-                                indscus_lw
+                                indscus_lw,
+                                jbstat, fimnlabgrs_dv, fiyrinvinc_dv, econ_poverty, log_income, econ_realequivinc
                  ))
 
 
@@ -59,16 +65,22 @@ data_ready <- data |>
     Dwb_mcs = sf12mcs_dv,
     Dwb_pcs = sf12pcs_dv,
     weight = indscus_lw,
-    EmployedToUnemployed = sample(0:1, nrow(data), replace = TRUE),
-    UnemployedToEmployed = sample(0:1, nrow(data), replace = TRUE),
-    PersistentUnemployed = sample(0:1, nrow(data), replace = TRUE),
-    NonPovertyToPoverty = sample(0:1, nrow(data), replace = TRUE),
-    PovertyToNonPoverty = sample(0:1, nrow(data), replace = TRUE),
-    PersistentPoverty = sample(0:1, nrow(data), replace = TRUE),
-    RealIncomeChange = sample(0:1, nrow(data), replace = TRUE),
-    RealIncomeDecrease_D = sample(0:1, nrow(data), replace = TRUE),
-    Covid_2020_D = (intdaty_dv == 20) * 1,
-    Covid_2021_D = (intdaty_dv == 21) * 1,
+    les_c4 = case_when(
+      jbstat %in% c(1, 2, 5, 12, 13, 14) ~ "Employed or self-employed",
+      jbstat == 7 ~ "Student",
+      jbstat %in% c(3, 6, 8, 10, 11, 97, 9) ~ "Not employed",
+      jbstat == 4 ~ "Retired"
+    ),
+    EmployedToUnemployed = as.integer(lag(les_c4) == "Employed or self-employed" & les_c4 == "Not employed" & dlltsd == 0),
+    UnemployedToEmployed = as.integer(lag(les_c4) == "Not employed" & les_c4 == "Employed or self-employed" & dlltsd == 0),
+    PersistentUnemployed = as.integer(lag(les_c4) == "Not employed" & les_c4 == "Not employed" & dlltsd == 0),
+    NonPovertyToPoverty = as.integer(lag(econ_poverty) == 0 & econ_poverty == 1),
+    PovertyToNonPoverty = as.integer(lag(econ_poverty) == 1 & econ_poverty == 0),
+    PersistentPoverty = as.integer(lag(econ_poverty) == 1 & econ_poverty == 1),
+    RealIncomeChange = log_income - lag(log_income),
+    RealIncomeDecrease_D = as.integer(econ_realequivinc < lag(econ_realequivinc)),
+    Covid_2020_D = as.integer(intdaty_dv == 20),
+    Covid_2021_D = as.integer(intdaty_dv == 21),
   ) |> 
   left_join(codes_translate, by = "gor_dv") |> 
   mutate(across(c(Dag, Dgn, Dls, Dwb_mcs, Dwb_pcs, Dhe, D_Econ_benefits, Dlltsd, D_Home_owner), zap_labels)) |> 
