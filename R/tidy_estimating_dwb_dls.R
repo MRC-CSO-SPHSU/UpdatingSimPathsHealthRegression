@@ -170,6 +170,24 @@ dls_mods_females <- future_map(.options = furrr_options(seed = TRUE), dls_formul
   feols(form, data = data_with_dummies_lags, weights = ~weight, cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 1)
 })
 
+mcs_mega_mod_males <- 
+  feols(
+    EmployedToUnemployed +
+    UnemployedToEmployed +
+    PersistentUnemployed +
+    NonPovertyToPoverty +
+    PovertyToNonPoverty +
+    PersistentPoverty +
+    RealIncomeChange +
+    RealIncomeDecrease_D | Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
+      Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
+      UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
+      Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
+      Dls_L1 + Dwb_mcs_L1 + Dwb_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
+      Deh_c3_Low + Year_transformed,
+    weights = ~weight, cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 0
+  )
+
 
 # combine and write -------------------------------------------------------
 

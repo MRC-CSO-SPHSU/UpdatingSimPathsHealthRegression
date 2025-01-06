@@ -5,11 +5,7 @@ library(haven)
 # Check estimate directions make sense
 # Test whether odds between levels are equivalent
 
-cols <- read_dta('T:/projects/HEED/DataAnalysis/hfcovid_analysis.dta', n_max = 100)
-
-# cols |> select(
-#   
-# )
+# cols <- read_dta('T:/projects/HEED/DataAnalysis/hfcovid_analysis.dta', n_max = 100)
 
 data <- read_dta('T:/projects/HEED/DataAnalysis/hfcovid_analysis.dta',
                  col_select = c(pidp, hidp, wave,
