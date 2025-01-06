@@ -60,7 +60,7 @@ writeData(wb, "UK_DWB_PCS1", dwb_pcs_model_cols3)
 
 dls_model <- data_with_dummies_lags %$%
   lm(
-    Dwb_pcs ~ 0 + Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
+    Dls ~ 0 + Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
       Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
       UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
       Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
@@ -100,7 +100,7 @@ mcs_formulae <- cols_to_test |>
     Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
     UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
     Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
-    Dwb_mcs_L1 + Dwb_pcs_L1 + Dgn + Dag + Dag_sq + Deh_c3_Medium +
+    Dwb_mcs_L1 + Dwb_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
     Deh_c3_Low + Year_transformed",
     other_cols = paste(cols_to_test[cols_to_test != outcome], collapse = " + ")
     )
@@ -109,24 +109,26 @@ mcs_formulae <- cols_to_test |>
 pcs_formulae <- cols_to_test |>
   map(\(outcome) Formula::as.Formula(
     glue::glue(
-      "Dwb_pcs ~ 0 + {outcome} | Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
+      "Dwb_pcs ~ 0 + {outcome} | {other_cols} + Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
     Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
     UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
     Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
-    Dwb_mcs_L1 + Dwb_pcs_L1 + Dgn + Dag + Dag_sq + Deh_c3_Medium +
-    Deh_c3_Low + Year_transformed"
+    Dwb_mcs_L1 + Dwb_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
+    Deh_c3_Low + Year_transformed",
+    other_cols = paste(cols_to_test[cols_to_test != outcome], collapse = " + ")
     )
   ))
 
 dls_formulae <- cols_to_test |>
   map(\(outcome) Formula::as.Formula(
     glue::glue(
-      "Dls ~ 0 + {outcome} | Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
+      "Dls ~ 0 + {outcome} | {other_cols} + Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
     Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
     UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
     Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
-    Dls_L1 + Dwb_mcs_L1 + Dwb_pcs_L1 + Dgn + Dag + Dag_sq + Deh_c3_Medium +
-    Deh_c3_Low + Year_transformed"
+    Dls_L1 + Dwb_mcs_L1 + Dwb_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
+    Deh_c3_Low + Year_transformed",
+    other_cols = paste(cols_to_test[cols_to_test != outcome], collapse = " + ")
     )
   ))
 
