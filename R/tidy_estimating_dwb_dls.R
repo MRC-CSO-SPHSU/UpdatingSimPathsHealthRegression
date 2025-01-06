@@ -144,35 +144,127 @@ dls_formulae <- cols_to_test |>
 # )
 
 library(furrr)
-plan(multisession, workers = 6)
-
-mcs_mods_males <- future_map(.options = furrr_options(seed = TRUE), mcs_formulae, \(form) {
-  feols(form, data = data_with_dummies_lags, weights = ~weight, cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 0)
-})
-
-mcs_mods_females <- future_map(.options = furrr_options(seed = TRUE), mcs_formulae, \(form) {
-  feols(form, data = data_with_dummies_lags, weights = ~weight, cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 1)
-})
-
-pcs_mods_males <- future_map(.options = furrr_options(seed = TRUE), pcs_formulae, \(form) {
-  feols(form, data = data_with_dummies_lags, weights = ~weight, cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 0)
-})
-
-pcs_mods_females <- future_map(.options = furrr_options(seed = TRUE), pcs_formulae, \(form) {
-  feols(form, data = data_with_dummies_lags, weights = ~weight, cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 1)
-})
-
-dls_mods_males <- future_map(.options = furrr_options(seed = TRUE), dls_formulae, \(form) {
-  feols(form, data = data_with_dummies_lags, weights = ~weight, cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 0)
-})
-
-dls_mods_females <- future_map(.options = furrr_options(seed = TRUE), dls_formulae, \(form) {
-  feols(form, data = data_with_dummies_lags, weights = ~weight, cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 1)
-})
+plan(multisession, workers = 32)
+# 
+# mcs_mods_males <- future_map(.options = furrr_options(seed = TRUE), mcs_formulae, \(form) {
+#   feols(form, data = data_with_dummies_lags, 
+#         weights = ~weight,
+#         cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 0)
+# })
+# 
+# mcs_mods_females <- future_map(.options = furrr_options(seed = TRUE), mcs_formulae, \(form) {
+#   feols(form, data = data_with_dummies_lags, 
+#         weights = ~weight,
+#         cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 1)
+# })
+# 
+# pcs_mods_males <- future_map(.options = furrr_options(seed = TRUE), pcs_formulae, \(form) {
+#   feols(form, data = data_with_dummies_lags, 
+#         weights = ~weight,
+#         cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 0)
+# })
+# 
+# pcs_mods_females <- future_map(.options = furrr_options(seed = TRUE), pcs_formulae, \(form) {
+#   feols(form, data = data_with_dummies_lags, 
+#         weights = ~weight,
+#         cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 1)
+# })
+# 
+# dls_mods_males <- future_map(.options = furrr_options(seed = TRUE), dls_formulae, \(form) {
+#   feols(form, data = data_with_dummies_lags, 
+#         weights = ~weight,
+#         cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 0)
+# })
+# 
+# dls_mods_females <- future_map(.options = furrr_options(seed = TRUE), dls_formulae, \(form) {
+#   feols(form, data = data_with_dummies_lags, 
+#         weights = ~weight,
+#         cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 1)
+# })
 
 mcs_mega_mod_males <- 
   feols(
-    EmployedToUnemployed +
+    Dwb_mcs ~ 0 + EmployedToUnemployed +
+    UnemployedToEmployed +
+    PersistentUnemployed +
+    NonPovertyToPoverty +
+    PovertyToNonPoverty +
+    PersistentPoverty +
+    RealIncomeChange +
+    RealIncomeDecrease_D | Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
+      Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
+      UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
+      Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
+      Dwb_mcs_L1 + Dwb_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
+      Deh_c3_Low + Year_transformed,
+    data = data_with_dummies_lags,
+    weights = ~weight, 
+    cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 0
+  )
+
+mcs_mega_mod_females <- 
+  feols(
+    Dwb_mcs ~ 0 + EmployedToUnemployed +
+    UnemployedToEmployed +
+    PersistentUnemployed +
+    NonPovertyToPoverty +
+    PovertyToNonPoverty +
+    PersistentPoverty +
+    RealIncomeChange +
+    RealIncomeDecrease_D | Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
+      Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
+      UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
+      Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
+      Dwb_mcs_L1 + Dwb_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
+      Deh_c3_Low + Year_transformed,
+    data = data_with_dummies_lags,
+    weights = ~weight,
+    cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 1
+  )
+
+pcs_mega_mod_males <- 
+  feols(
+    Dwb_pcs ~ 0 + EmployedToUnemployed +
+    UnemployedToEmployed +
+    PersistentUnemployed +
+    NonPovertyToPoverty +
+    PovertyToNonPoverty +
+    PersistentPoverty +
+    RealIncomeChange +
+    RealIncomeDecrease_D | Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
+      Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
+      UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
+      Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
+      Dwb_mcs_L1 + Dwb_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
+      Deh_c3_Low + Year_transformed,
+    data = data_with_dummies_lags,
+    weights = ~weight, 
+    cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 0
+  )
+
+pcs_mega_mod_females <- 
+  feols(
+    Dwb_pcs ~ 0 + EmployedToUnemployed +
+    UnemployedToEmployed +
+    PersistentUnemployed +
+    NonPovertyToPoverty +
+    PovertyToNonPoverty +
+    PersistentPoverty +
+    RealIncomeChange +
+    RealIncomeDecrease_D | Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
+      Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
+      UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
+      Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
+      Dwb_mcs_L1 + Dwb_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
+      Deh_c3_Low + Year_transformed,
+    data = data_with_dummies_lags,
+    weights = ~weight,
+    cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 1
+  )
+
+dls_mega_mod_males <- 
+  feols(
+    Dls ~ 0 + EmployedToUnemployed +
     UnemployedToEmployed +
     PersistentUnemployed +
     NonPovertyToPoverty +
@@ -185,112 +277,212 @@ mcs_mega_mod_males <-
       Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
       Dls_L1 + Dwb_mcs_L1 + Dwb_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
       Deh_c3_Low + Year_transformed,
-    weights = ~weight, cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 0
+    data = data_with_dummies_lags,
+    weights = ~weight, 
+    cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 0
+  )
+
+dls_mega_mod_females <- 
+  feols(
+    Dls ~ 0 + EmployedToUnemployed +
+    UnemployedToEmployed +
+    PersistentUnemployed +
+    NonPovertyToPoverty +
+    PovertyToNonPoverty +
+    PersistentPoverty +
+    RealIncomeChange +
+    RealIncomeDecrease_D | Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
+      Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
+      UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
+      Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
+      Dls_L1 + Dwb_mcs_L1 + Dwb_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
+      Deh_c3_Low + Year_transformed,
+    data = data_with_dummies_lags,
+    weights = ~weight,
+    cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 1
   )
 
 
 # combine and write -------------------------------------------------------
 
-mcs_mods_males |> 
-  map(\(model) {
-    
-    term <- names(model$coefficients)
-    
-    model |> 
-      broom::tidy() |> 
-      transmute(
-        REGRESSOR = term,
-        COEFFICIENT = estimate,
-        "{term}" := std.error^2
-      )
-  }) |> 
-  reduce(bind_rows) |> 
-  map_dfr(replace_na, 0) |> 
+var_matrix <- function(model_in) {
+  var_covar <- vcov(model_in)
+  var_mat <- var_covar
+  var_mat[1:nrow(var_mat), 1:ncol(var_mat)] <- 0
+  
+  diag(var_mat) <- diag(var_covar)
+  
+  var_mat
+}
+
+mcs_mega_mod_males |> 
+  broom::tidy() |> 
+  transmute(
+    REGRESSOR = term,
+    COEFFICIENT = estimate
+  ) |> 
+  bind_cols(
+    var_matrix(mcs_mega_mod_males)
+  ) |> 
   writeData(wb, "UK_DWB_MCS2_Males", x = _)
 
-mcs_mods_females |> 
-  map(\(model) {
-    
-    term <- names(model$coefficients)
-    
-    model |> 
-      broom::tidy() |> 
-      transmute(
-        REGRESSOR = term,
-        COEFFICIENT = estimate,
-        "{term}" := std.error^2
-      )
-  }) |> 
-  reduce(bind_rows) |> 
-  map_dfr(replace_na, 0) |> 
+mcs_mega_mod_females |> 
+  broom::tidy() |> 
+  transmute(
+    REGRESSOR = term,
+    COEFFICIENT = estimate
+  ) |> 
+  bind_cols(
+    var_matrix(mcs_mega_mod_females)
+  ) |> 
   writeData(wb, "UK_DWB_MCS2_Females", x = _)
 
-pcs_mods_males |> 
-  map(\(model) {
-    
-    term <- names(model$coefficients)
-    
-    model |> 
-      broom::tidy() |> 
-      transmute(
-        REGRESSOR = term,
-        COEFFICIENT = estimate,
-        "{term}" := std.error^2
-      )
-  }) |> 
-  reduce(bind_rows) |> 
-  map_dfr(replace_na, 0) |> 
+pcs_mega_mod_males |> 
+  broom::tidy() |> 
+  transmute(
+    REGRESSOR = term,
+    COEFFICIENT = estimate
+  ) |> 
+  bind_cols(
+    var_matrix(pcs_mega_mod_males)
+  ) |> 
   writeData(wb, "UK_DWB_PCS2_Males", x = _)
 
-pcs_mods_females |> 
-  map(\(model) {
-    
-    term <- names(model$coefficients)
-    
-    model |> 
-      broom::tidy() |> 
-      transmute(
-        REGRESSOR = term,
-        COEFFICIENT = estimate,
-        "{term}" := std.error^2
-      )
-  }) |> 
-  reduce(bind_rows) |> 
-  map_dfr(replace_na, 0) |> 
+pcs_mega_mod_females |> 
+  broom::tidy() |> 
+  transmute(
+    REGRESSOR = term,
+    COEFFICIENT = estimate
+  ) |> 
+  bind_cols(
+    var_matrix(pcs_mega_mod_females)
+  ) |> 
   writeData(wb, "UK_DWB_PCS2_Females", x = _)
 
-dls_mods_males |> 
-  map(\(model) {
-    
-    term <- names(model$coefficients)
-    
-    model |> 
-      broom::tidy() |> 
-      transmute(
-        REGRESSOR = term,
-        COEFFICIENT = estimate,
-        "{term}" := std.error^2
-      )
-  }) |> 
-  reduce(bind_rows) |> 
-  map_dfr(replace_na, 0) |> 
+dls_mega_mod_males |> 
+  broom::tidy() |> 
+  transmute(
+    REGRESSOR = term,
+    COEFFICIENT = estimate
+  ) |> 
+  bind_cols(
+    var_matrix(dls_mega_mod_males)
+  ) |> 
   writeData(wb, "UK_DLS2_Males", x = _)
 
-dls_mods_females |> 
-  map(\(model) {
-    
-    term <- names(model$coefficients)
-    
-    model |> 
-      broom::tidy() |> 
-      transmute(
-        REGRESSOR = term,
-        COEFFICIENT = estimate,
-        "{term}" := std.error^2
-      )
-  }) |> 
-  reduce(bind_rows) |> 
-  map_dfr(replace_na, 0) |> 
+dls_mega_mod_females |> 
+  broom::tidy() |> 
+  transmute(
+    REGRESSOR = term,
+    COEFFICIENT = estimate
+  ) |> 
+  bind_cols(
+    var_matrix(dls_mega_mod_females)
+  ) |> 
   writeData(wb, "UK_DLS2_Females", x = _)
+
+# mcs_mods_males |> 
+#   map(\(model) {
+#     
+#     term <- names(model$coefficients)
+#     
+#     model |> 
+#       broom::tidy() |> 
+#       transmute(
+#         REGRESSOR = term,
+#         COEFFICIENT = estimate,
+#         "{term}" := std.error^2
+#       )
+#   }) |> 
+#   reduce(bind_rows) |> 
+#   map_dfr(replace_na, 0) |> 
+#   writeData(wb, "UK_DWB_MCS2_Males", x = _)
+# 
+# mcs_mods_females |> 
+#   map(\(model) {
+#     
+#     term <- names(model$coefficients)
+#     
+#     model |> 
+#       broom::tidy() |> 
+#       transmute(
+#         REGRESSOR = term,
+#         COEFFICIENT = estimate,
+#         "{term}" := std.error^2
+#       )
+#   }) |> 
+#   reduce(bind_rows) |> 
+#   map_dfr(replace_na, 0) |> 
+#   writeData(wb, "UK_DWB_MCS2_Females", x = _)
+# 
+# pcs_mods_males |> 
+#   map(\(model) {
+#     
+#     term <- names(model$coefficients)
+#     
+#     model |> 
+#       broom::tidy() |> 
+#       transmute(
+#         REGRESSOR = term,
+#         COEFFICIENT = estimate,
+#         "{term}" := std.error^2
+#       )
+#   }) |> 
+#   reduce(bind_rows) |> 
+#   map_dfr(replace_na, 0) |> 
+#   writeData(wb, "UK_DWB_PCS2_Males", x = _)
+# 
+# pcs_mods_females |> 
+#   map(\(model) {
+#     
+#     term <- names(model$coefficients)
+#     
+#     model |> 
+#       broom::tidy() |> 
+#       transmute(
+#         REGRESSOR = term,
+#         COEFFICIENT = estimate,
+#         "{term}" := std.error^2
+#       )
+#   }) |> 
+#   reduce(bind_rows) |> 
+#   map_dfr(replace_na, 0) |> 
+#   writeData(wb, "UK_DWB_PCS2_Females", x = _)
+# 
+# dls_mods_males |> 
+#   map(\(model) {
+#     
+#     term <- names(model$coefficients)
+#     
+#     model |> 
+#       broom::tidy() |> 
+#       transmute(
+#         REGRESSOR = term,
+#         COEFFICIENT = estimate,
+#         "{term}" := std.error^2
+#       )
+#   }) |> 
+#   reduce(bind_rows) |> 
+#   map_dfr(replace_na, 0) |> 
+#   writeData(wb, "UK_DLS2_Males", x = _)
+# 
+# dls_mods_females |> 
+#   map(\(model) {
+#     
+#     term <- names(model$coefficients)
+#     
+#     model |> 
+#       broom::tidy() |> 
+#       transmute(
+#         REGRESSOR = term,
+#         COEFFICIENT = estimate,
+#         "{term}" := std.error^2
+#       )
+#   }) |> 
+#   reduce(bind_rows) |> 
+#   map_dfr(replace_na, 0) |> 
+#   writeData(wb, "UK_DLS2_Females", x = _)
+
+dir.create("outfiles")
 
 saveWorkbook(wb, "outfiles/reg_wellbeing.xlsx", overwrite = TRUE)
