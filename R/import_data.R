@@ -80,7 +80,7 @@ data_ready <- data |>
 data_with_dummies <- data_ready |> 
   fastDummies::dummy_cols(select_columns = c("Ydses_c5"), remove_first_dummy = TRUE) |> 
   fastDummies::dummy_cols(select_columns = c("Deh_c3", "Dcpst"), remove_first_dummy = TRUE) |> 
-  fastDummies::dummy_cols(select_columns = c("drgnl"), remove_first_dummy = TRUE, omit_colname_prefix = TRUE)
+  fastDummies::dummy_cols(select_columns = c("drgnl"), remove_first_dummy = TRUE, omit_colname_prefix = TRUE) 
 
 library(dtplyr)
 
@@ -129,8 +129,10 @@ data_with_dummies_dt[, `:=`(
 
 data_with_dummies_lags <- data_with_dummies_dt |> 
   as_tibble() |> 
+  filter(!if_any(!ends_with("L1"), is.na)) |> 
   select(
     pidp,
+    wave,
     Year_transformed,
     weight,
     Dgn, 
@@ -167,5 +169,4 @@ data_with_dummies_lags <- data_with_dummies_dt |>
     starts_with("Deh", ignore.case = FALSE),
     -ends_with("NA"),
   ) |> 
-  mutate(Constant = 1) |> 
-  drop_na()
+  mutate(Constant = 1)
