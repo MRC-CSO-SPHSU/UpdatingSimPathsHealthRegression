@@ -1,5 +1,6 @@
 library(tidyverse)
 library(haven)
+library(data.table)
 
 ## NOTES ## 
 # Check estimate directions make sense
@@ -68,17 +69,9 @@ data_ready <- data |>
       jbstat %in% c(3, 6, 8, 10, 11, 97, 9) ~ "Not employed",
       jbstat == 4 ~ "Retired"
     )
-    # EmployedToUnemployed = as.integer(lag(les_c4) == "Employed or self-employed" & les_c4 == "Not employed" & dlltsd == 0),
-    # UnemployedToEmployed = as.integer(lag(les_c4) == "Not employed" & les_c4 == "Employed or self-employed" & dlltsd == 0),
-    # PersistentUnemployed = as.integer(lag(les_c4) == "Not employed" & les_c4 == "Not employed" & dlltsd == 0),
-    # NonPovertyToPoverty = as.integer(lag(econ_poverty) == 0 & econ_poverty == 1),
-    # PovertyToNonPoverty = as.integer(lag(econ_poverty) == 1 & econ_poverty == 0),
-    # PersistentPoverty = as.integer(lag(econ_poverty) == 1 & econ_poverty == 1),
-    # RealIncomeChange = log_income - lag(log_income),
-    # RealIncomeDecrease_D = as.integer(econ_realequivinc < lag(econ_realequivinc)),
   ) |> 
   left_join(codes_translate, by = "gor_dv") |> 
-  mutate(across(c(Dag, Dgn, Dls, Dhe_mcs, Dhe_pcs, Dhe, D_Econ_benefits, Dlltsd, D_Home_owner), zap_labels)) |> 
+  mutate(across(c(Dag, Dgn, Dls, Dhe_mcs, Dhe_pcs, Dhm, Dhe, D_Econ_benefits, Dlltsd, D_Home_owner), zap_labels)) |> 
   mutate(drgnl = relevel(factor(drgnl), ref = "UKI")) |> 
   select(-gor_dv)
 
