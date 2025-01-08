@@ -9,62 +9,72 @@ wb <- createWorkbook()
 
 expand_grid(
   c("UK_"),
-  c("DWB_MCS", "DWB_PCS", "DLS"),
+  c("DHE_MCS", "DHE_PCS", "DLS"),
   c("1", "2_Males", "2_Females")
 ) |> 
   pmap(paste0) |> 
   reduce(c) |> 
   walk(~addWorksheet(.x, wb = wb))
 
-dwb_mcs_model <- data_with_dummies_lags %$%
+# Do GHQ here too!
+#' Lag Age and Agesq
+#' Remove lagged PCS
+
+dhe_mcs_model <- data_with_dummies_lags %$%
   lm(
-    Dwb_mcs ~ 0 + Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
-      Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
+    Dhe_mcs ~ 0 + Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
+      Dcpst_PreviouslyPartnered + Dnc_L1 + UKC + UKD + UKE + UKF +
       UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
       Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
-      Dwb_mcs_L1 + Dwb_pcs_L1 + Dgn + Dag + Dag_sq + Deh_c3_Medium +
+      Dhe_mcs_L1 + Dhe_pcs_L1 + 
+      Dgn + Dag_L1 + Dag_sq_L1 + Deh_c3_Medium +
       Deh_c3_Low + Year_transformed,
     weights = weight
   )
 
-dwb_mcs_model_coef <- dwb_mcs_model$coefficients
-dwb_mcs_model_vcov <- sandwich::vcovCL(dwb_mcs_model, cluster = ~pidp)
-dwb_mcs_model_cols <-  cbind(dwb_mcs_model_coef, dwb_mcs_model_vcov)
-dwb_mcs_model_cols2 <- as.data.frame(dwb_mcs_model_cols)
-dwb_mcs_model_cols3 <- rownames_to_column(dwb_mcs_model_cols2, "REGRESSOR") |>
-  rename('COEFFICIENT' = 'dwb_mcs_model_coef')
+dhe_mcs_model_coef <- dhe_mcs_model$coefficients
+dhe_mcs_model_vcov <- sandwich::vcovCL(dhe_mcs_model, cluster = ~pidp)
+dhe_mcs_model_cols <-  cbind(dhe_mcs_model_coef, dhe_mcs_model_vcov)
+dhe_mcs_model_cols2 <- as.data.frame(dhe_mcs_model_cols)
+dhe_mcs_model_cols3 <- rownames_to_column(dhe_mcs_model_cols2, "REGRESSOR") |>
+  rename('COEFFICIENT' = 'dhe_mcs_model_coef')
 
-writeData(wb, "UK_DWB_MCS1", dwb_mcs_model_cols3)
+writeData(wb, "UK_DHE_MCS1", dhe_mcs_model_cols3)
 
 ## Ouctome: SF12 mental (sf12mcs_dv), as linear regression
+#' PCS age stays unlagged
 
-dwb_pcs_model <- data_with_dummies_lags %$%
+dhe_pcs_model <- data_with_dummies_lags %$%
   lm(
-    Dwb_pcs ~ 0 + Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
-      Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
+    Dhe_pcs ~ 0 + Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
+      Dcpst_PreviouslyPartnered + Dnc_L1 + UKC + UKD + UKE + UKF +
       UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
       Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
-      Dwb_mcs_L1 + Dwb_pcs_L1 + Dgn + Dag + Dag_sq + Deh_c3_Medium +
+      Dhe_mcs_L1 + Dhe_pcs_L1 +
+      Dgn + Dag + Dag_sq + Deh_c3_Medium +
       Deh_c3_Low + Year_transformed,
     weights = weight
   )
 
-dwb_pcs_model_coef <- dwb_pcs_model$coefficients
-dwb_pcs_model_vcov <- sandwich::vcovCL(dwb_pcs_model, cluster = ~pidp)
-dwb_pcs_model_cols <-  cbind(dwb_pcs_model_coef, dwb_pcs_model_vcov)
-dwb_pcs_model_cols2 <- as.data.frame(dwb_pcs_model_cols)
-dwb_pcs_model_cols3 <- rownames_to_column(dwb_pcs_model_cols2, "REGRESSOR") |>
-  rename('COEFFICIENT' = 'dwb_pcs_model_coef')
+dhe_pcs_model_coef <- dhe_pcs_model$coefficients
+dhe_pcs_model_vcov <- sandwich::vcovCL(dhe_pcs_model, cluster = ~pidp)
+dhe_pcs_model_cols <-  cbind(dhe_pcs_model_coef, dhe_pcs_model_vcov)
+dhe_pcs_model_cols2 <- as.data.frame(dhe_pcs_model_cols)
+dhe_pcs_model_cols3 <- rownames_to_column(dhe_pcs_model_cols2, "REGRESSOR") |>
+  rename('COEFFICIENT' = 'dhe_pcs_model_coef')
 
-writeData(wb, "UK_DWB_PCS1", dwb_pcs_model_cols3)
+writeData(wb, "UK_DHE_PCS1", dhe_pcs_model_cols3)
+
+#' Lag Age and Agesq
 
 dls_model <- data_with_dummies_lags %$%
   lm(
     Dls ~ 0 + Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
-      Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
+      Dcpst_PreviouslyPartnered + Dnc_L1 + UKC + UKD + UKE + UKF +
       UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
       Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
-      Dls_L1 + Dwb_mcs_L1 + Dwb_pcs_L1 + Dgn + Dag + Dag_sq + Deh_c3_Medium +
+      Dls_L1 + Dhe_pcs_L1 +
+      Dgn + Dag_L1 + Dag_sq_L1 + Deh_c3_Medium +
       Deh_c3_Low + Year_transformed,
     weights = weight
   )
@@ -96,11 +106,11 @@ cols_to_test <- c(
 mcs_formulae <- cols_to_test |>
   map(\(outcome) Formula::as.Formula(
     glue::glue(
-      "Dwb_mcs ~ 0 + {outcome} | {other_cols} + Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
-    Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
+      "Dhe_mcs ~ 0 + {outcome} | {other_cols} + Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
+    Dcpst_PreviouslyPartnered + Dnc_L1 + UKC + UKD + UKE + UKF +
     UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
     Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
-    Dwb_mcs_L1 + Dwb_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
+    Dhe_mcs_L1 + Dhe_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
     Deh_c3_Low + Year_transformed",
     other_cols = paste(cols_to_test[cols_to_test != outcome], collapse = " + ")
     )
@@ -109,11 +119,11 @@ mcs_formulae <- cols_to_test |>
 pcs_formulae <- cols_to_test |>
   map(\(outcome) Formula::as.Formula(
     glue::glue(
-      "Dwb_pcs ~ 0 + {outcome} | {other_cols} + Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
-    Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
+      "Dhe_pcs ~ 0 + {outcome} | {other_cols} + Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
+    Dcpst_PreviouslyPartnered + Dnc_L1 + UKC + UKD + UKE + UKF +
     UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
     Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
-    Dwb_mcs_L1 + Dwb_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
+    Dhe_mcs_L1 + Dhe_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
     Deh_c3_Low + Year_transformed",
     other_cols = paste(cols_to_test[cols_to_test != outcome], collapse = " + ")
     )
@@ -123,21 +133,21 @@ dls_formulae <- cols_to_test |>
   map(\(outcome) Formula::as.Formula(
     glue::glue(
       "Dls ~ 0 + {outcome} | {other_cols} + Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
-    Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
+    Dcpst_PreviouslyPartnered + Dnc_L1 + UKC + UKD + UKE + UKF +
     UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
     Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
-    Dls_L1 + Dwb_mcs_L1 + Dwb_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
+    Dls_L1 + Dhe_mcs_L1 + Dhe_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
     Deh_c3_Low + Year_transformed",
     other_cols = paste(cols_to_test[cols_to_test != outcome], collapse = " + ")
     )
   ))
 
 # mod1 <- feols(
-#   Dwb_mcs ~ 0 + EmployedToUnemployed | Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
-#     Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
+#   Dhe_mcs ~ 0 + EmployedToUnemployed | Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
+#     Dcpst_PreviouslyPartnered + Dnc_L1 + UKC + UKD + UKE + UKF +
 #     UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
 #     Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
-#     Dwb_mcs_L1 + Dwb_pcs_L1 + Dgn + Dag + Dag_sq + Deh_c3_Medium +
+#     Dhe_mcs_L1 + Dhe_pcs_L1 + Dgn + Dag + Dag_sq + Deh_c3_Medium +
 #     Deh_c3_Low + Year_transformed,
 #   data = data_with_dummies_lags,
 #   weights = ~ weight
@@ -184,19 +194,20 @@ plan(multisession, workers = 32)
 
 mcs_mega_mod_males <- 
   feols(
-    Dwb_mcs ~ 0 + EmployedToUnemployed +
+    Dhe_mcs ~ 0 + EmployedToUnemployed +
     UnemployedToEmployed +
     PersistentUnemployed +
     NonPovertyToPoverty +
     PovertyToNonPoverty +
     PersistentPoverty +
     RealIncomeChange +
-    RealIncomeDecrease_D | Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
-      Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
+    RealIncomeDecrease_D + D_Econ_benefits + D_Home_owner + Dcpst_Single +
+      Dcpst_PreviouslyPartnered + Dnc_L1 + UKC + UKD + UKE + UKF +
       UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
       Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
-      Dwb_mcs_L1 + Dwb_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
+      Dhe_mcs_L1 + Dhe_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
       Deh_c3_Low + Year_transformed,
+    fixef = "pidp",
     data = data_with_dummies_lags,
     weights = ~weight, 
     cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 0
@@ -204,7 +215,7 @@ mcs_mega_mod_males <-
 
 mcs_mega_mod_females <- 
   feols(
-    Dwb_mcs ~ 0 + EmployedToUnemployed +
+    Dhe_mcs ~ 0 + EmployedToUnemployed +
     UnemployedToEmployed +
     PersistentUnemployed +
     NonPovertyToPoverty +
@@ -212,10 +223,10 @@ mcs_mega_mod_females <-
     PersistentPoverty +
     RealIncomeChange +
     RealIncomeDecrease_D | Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
-      Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
+      Dcpst_PreviouslyPartnered + Dnc_L1 + UKC + UKD + UKE + UKF +
       UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
       Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
-      Dwb_mcs_L1 + Dwb_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
+      Dhe_mcs_L1 + Dhe_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
       Deh_c3_Low + Year_transformed,
     data = data_with_dummies_lags,
     weights = ~weight,
@@ -224,19 +235,20 @@ mcs_mega_mod_females <-
 
 pcs_mega_mod_males <- 
   feols(
-    Dwb_pcs ~ 0 + EmployedToUnemployed +
+    Dhe_pcs ~ 0 + EmployedToUnemployed +
     UnemployedToEmployed +
     PersistentUnemployed +
     NonPovertyToPoverty +
     PovertyToNonPoverty +
     PersistentPoverty +
     RealIncomeChange +
-    RealIncomeDecrease_D | Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
-      Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
+    RealIncomeDecrease_D + D_Econ_benefits + D_Home_owner + Dcpst_Single +
+      Dcpst_PreviouslyPartnered + Dnc_L1 + UKC + UKD + UKE + UKF +
       UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
       Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
-      Dwb_mcs_L1 + Dwb_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
+      Dhe_mcs_L1 + Dhe_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
       Deh_c3_Low + Year_transformed,
+    fixef = "pidp",
     data = data_with_dummies_lags,
     weights = ~weight, 
     cluster = ~pidp, se = "cluster", subset = data_with_dummies_lags$Dgn == 0
@@ -244,7 +256,7 @@ pcs_mega_mod_males <-
 
 pcs_mega_mod_females <- 
   feols(
-    Dwb_pcs ~ 0 + EmployedToUnemployed +
+    Dhe_pcs ~ 0 + EmployedToUnemployed +
     UnemployedToEmployed +
     PersistentUnemployed +
     NonPovertyToPoverty +
@@ -252,10 +264,10 @@ pcs_mega_mod_females <-
     PersistentPoverty +
     RealIncomeChange +
     RealIncomeDecrease_D | Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
-      Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
+      Dcpst_PreviouslyPartnered + Dnc_L1 + UKC + UKD + UKE + UKF +
       UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
       Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
-      Dwb_mcs_L1 + Dwb_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
+      Dhe_mcs_L1 + Dhe_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
       Deh_c3_Low + Year_transformed,
     data = data_with_dummies_lags,
     weights = ~weight,
@@ -272,10 +284,10 @@ dls_mega_mod_males <-
     PersistentPoverty +
     RealIncomeChange +
     RealIncomeDecrease_D | Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
-      Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
+      Dcpst_PreviouslyPartnered + Dnc_L1 + UKC + UKD + UKE + UKF +
       UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
       Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
-      Dls_L1 + Dwb_mcs_L1 + Dwb_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
+      Dls_L1 + Dhe_mcs_L1 + Dhe_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
       Deh_c3_Low + Year_transformed,
     data = data_with_dummies_lags,
     weights = ~weight, 
@@ -292,10 +304,10 @@ dls_mega_mod_females <-
     PersistentPoverty +
     RealIncomeChange +
     RealIncomeDecrease_D | Constant + D_Econ_benefits + D_Home_owner + Dcpst_Single +
-      Dcpst_PreviouslyPartnered + Dnc_L1 + Dhe_L1 + UKC + UKD + UKE + UKF +
+      Dcpst_PreviouslyPartnered + Dnc_L1 + UKC + UKD + UKE + UKF +
       UKG + UKH + UKJ + UKK + UKL + UKM + UKN + Ydses_c5_Q2_L1 +
       Ydses_c5_Q3_L1 + Ydses_c5_Q4_L1 + Ydses_c5_Q5_L1 + Dlltsd_L1 +
-      Dls_L1 + Dwb_mcs_L1 + Dwb_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
+      Dls_L1 + Dhe_mcs_L1 + Dhe_pcs_L1 + Dag + Dag_sq + Deh_c3_Medium +
       Deh_c3_Low + Year_transformed,
     data = data_with_dummies_lags,
     weights = ~weight,
@@ -324,7 +336,7 @@ mcs_mega_mod_males |>
   bind_cols(
     var_matrix(mcs_mega_mod_males)
   ) |> 
-  writeData(wb, "UK_DWB_MCS2_Males", x = _)
+  writeData(wb, "UK_DHE_MCS2_Males", x = _)
 
 mcs_mega_mod_females |> 
   broom::tidy() |> 
@@ -335,7 +347,7 @@ mcs_mega_mod_females |>
   bind_cols(
     var_matrix(mcs_mega_mod_females)
   ) |> 
-  writeData(wb, "UK_DWB_MCS2_Females", x = _)
+  writeData(wb, "UK_DHE_MCS2_Females", x = _)
 
 pcs_mega_mod_males |> 
   broom::tidy() |> 
@@ -346,7 +358,7 @@ pcs_mega_mod_males |>
   bind_cols(
     var_matrix(pcs_mega_mod_males)
   ) |> 
-  writeData(wb, "UK_DWB_PCS2_Males", x = _)
+  writeData(wb, "UK_DHE_PCS2_Males", x = _)
 
 pcs_mega_mod_females |> 
   broom::tidy() |> 
@@ -357,7 +369,7 @@ pcs_mega_mod_females |>
   bind_cols(
     var_matrix(pcs_mega_mod_females)
   ) |> 
-  writeData(wb, "UK_DWB_PCS2_Females", x = _)
+  writeData(wb, "UK_DHE_PCS2_Females", x = _)
 
 dls_mega_mod_males |> 
   broom::tidy() |> 
@@ -396,7 +408,7 @@ dls_mega_mod_females |>
 #   }) |> 
 #   reduce(bind_rows) |> 
 #   map_dfr(replace_na, 0) |> 
-#   writeData(wb, "UK_DWB_MCS2_Males", x = _)
+#   writeData(wb, "UK_DHE_MCS2_Males", x = _)
 # 
 # mcs_mods_females |> 
 #   map(\(model) {
@@ -413,7 +425,7 @@ dls_mega_mod_females |>
 #   }) |> 
 #   reduce(bind_rows) |> 
 #   map_dfr(replace_na, 0) |> 
-#   writeData(wb, "UK_DWB_MCS2_Females", x = _)
+#   writeData(wb, "UK_DHE_MCS2_Females", x = _)
 # 
 # pcs_mods_males |> 
 #   map(\(model) {
@@ -430,7 +442,7 @@ dls_mega_mod_females |>
 #   }) |> 
 #   reduce(bind_rows) |> 
 #   map_dfr(replace_na, 0) |> 
-#   writeData(wb, "UK_DWB_PCS2_Males", x = _)
+#   writeData(wb, "UK_DHE_PCS2_Males", x = _)
 # 
 # pcs_mods_females |> 
 #   map(\(model) {
@@ -447,7 +459,7 @@ dls_mega_mod_females |>
 #   }) |> 
 #   reduce(bind_rows) |> 
 #   map_dfr(replace_na, 0) |> 
-#   writeData(wb, "UK_DWB_PCS2_Females", x = _)
+#   writeData(wb, "UK_DHE_PCS2_Females", x = _)
 # 
 # dls_mods_males |> 
 #   map(\(model) {
