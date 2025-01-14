@@ -14,7 +14,8 @@ expand_grid(
 ) |> 
   pmap(paste0) |> 
   reduce(c) |> 
-  walk(~addWorksheet(.x, wb = wb_health_wb))
+  walk(\(new_col) {addWorksheet(new_col, wb = wb_health_wb) 
+    setColWidths(wb = wb_health_wb, new_col, 1, 30)})
 
 expand_grid(
   c("UK_"),
@@ -23,10 +24,11 @@ expand_grid(
 ) |> 
   pmap(paste0) |> 
   reduce(c) |> 
-  walk(~addWorksheet(.x, wb = wb_mental_health))
+  walk(\(new_col) {addWorksheet(new_col, wb = wb_mental_health) 
+    setColWidths(wb = wb_mental_health, new_col, 1, 30)})
 
 # All baseline
-library(Formula)
+# library(Formula)
 constant <- "Constant"
 
 baseline <- c(
@@ -74,7 +76,7 @@ stage2vars <- c(
 "NonPovertyToPoverty",
 "PovertyToNonPoverty",
 "PersistentPoverty",
-"RealIncomeChange",
+"d(log_income, 1)",
 "RealIncomeDecrease_D")
 
 stage2 <- paste(stage2vars, collapse = " + ")
@@ -91,6 +93,7 @@ lag_vars <- function(...) {
 }
 
 rename_lags <- function(lag_name) str_replace_all(lag_name, "l\\((\\w*).*\\)", "\\1_L1")
+rename_diffs <- function(diff_name) str_replace_all(diff_name, "d\\((\\w*).*\\)", "\\1") |> str_replace("log_income", "RealIncomeChange")
 
 mcs_controls <- lag_vars(age, mcs, pcs)
 pcs_controls <- paste(paste(age, collapse = " + "), lag_vars(mcs, pcs), sep = " + ")
@@ -113,11 +116,12 @@ mcs1_formula <- as.formula(
           0,
           common_vars,
           mcs_controls,
+          sex,
           constant,
           sep = " + "
         ))
-) |> 
-  Formula()
+) # |> 
+  # Formula::Formula()
 
 pcs1_formula <- as.formula(
   paste("Dhe_pcs ~",
@@ -125,11 +129,12 @@ pcs1_formula <- as.formula(
           0,
           common_vars,
           pcs_controls,
+          sex,
           constant,
           sep = " + "
         ))
-) |> 
-  Formula()
+) # |> 
+  # Formula::Formula()
 
 dls1_formula <- as.formula(
   paste("Dls ~",
@@ -137,11 +142,12 @@ dls1_formula <- as.formula(
           0,
           common_vars,
           dls_controls,
+          sex,
           constant,
           sep = " + "
         ))
-) |> 
-  Formula()
+) # |> 
+  # Formula::Formula()
 
 dhm1_formula <- as.formula(
   paste("Dhm ~",
@@ -149,11 +155,12 @@ dhm1_formula <- as.formula(
           0,
           common_vars,
           dhm_controls,
+          sex,
           constant,
           sep = " + "
         ))
-) |> 
-  Formula()
+) # |> 
+  # Formula::Formula()
 
 stage1_mods <- tibble(
   variable = c("UK_DHE_MCS1", "UK_DHE_PCS1", "UK_DLS1", "UK_HM1_L"),
@@ -163,18 +170,18 @@ stage1_mods <- tibble(
   mutate(model = map(formula, \(mod_form) {
     feols(
       mod_form,
-      data = data_with_dummies_lags,
+      data = data_with_dummies,
       weights = ~ weight,
       panel.id = ~ pidp + wave
     )
   }),
   out_table = map(model, \(mod_out) {
     broom::tidy(mod_out) |>
-      mutate(REGRESSOR = rename_lags(term),
+      mutate(REGRESSOR = rename_lags(term) |> rename_diffs(),
              COEFFICIENT = estimate,
              .keep = "none") |>
       bind_cols(vcov(mod_out)) |>
-      rename_with(rename_lags)
+      rename_with(compose(rename_lags, rename_diffs))
     
   }))
 
@@ -206,8 +213,8 @@ mcs2_formula <- as.formula(
           mcs_controls,
           sep = " + "
         ))
-) |> 
-  Formula()
+) # |> 
+  #  Formula::Formula()
 
 pcs2_formula <- as.formula(
   paste("Dhe_pcs ~",
@@ -217,8 +224,8 @@ pcs2_formula <- as.formula(
           pcs_controls,
           sep = " + "
         ))
-) |> 
-  Formula()
+) # |> 
+  # Formula::Formula()
 
 dls2_formula <- as.formula(
   paste("Dls ~",
@@ -228,8 +235,8 @@ dls2_formula <- as.formula(
           dls_controls,
           sep = " + "
         ))
-) |> 
-  Formula()
+) # |> 
+  # Formula::Formula()
 
 dhm2_formula <- as.formula(
   paste("Dhm ~",
@@ -239,8 +246,8 @@ dhm2_formula <- as.formula(
           dhm_controls,
           sep = " + "
         ))
-) |> 
-  Formula()
+) # |> 
+  # Formula::Formula()
 
 first_mods <- tibble(
   variable = c("UK_DHE_MCS2_{sex}", "UK_DHE_PCS2_{sex}", "UK_DLS2_{sex}", "UK_HM2_{sex}_L"),
@@ -249,12 +256,12 @@ first_mods <- tibble(
 ) |> 
   cross_join(tibble(sex = c("Males", "Females"))) |> 
   mutate(variable = glue::glue(variable, sex = sex), 
-         sex = as.numeric(sex == "Females"), 
+         sex = as.numeric(sex == "Males"), 
          .by = c(variable, sex)) |> 
   mutate(model = map2(formula, sex, \(mod_form, sex_grp) {
     feols(
       mod_form,
-      data = data_with_dummies_lags |> filter(Dgn == sex_grp),
+      data = data_with_dummies |> filter(Dgn == sex_grp, Dag %in% 25:64),
       fixef = "pidp",
       weights = ~ weight,
       panel.id = ~ pidp + wave,
@@ -265,15 +272,15 @@ first_mods <- tibble(
 stage2_mods <- first_mods |> 
   mutate(
   out_table = map(model, \(mod_out) {
-    
     broom::tidy(mod_out) |>
-      mutate(REGRESSOR = term,
+      mutate(REGRESSOR = rename_lags(term) |> rename_diffs(),
              COEFFICIENT = estimate,
              .keep = "none") |>
-      filter(REGRESSOR %in% stage2vars) |> 
+      filter(REGRESSOR %in% rename_diffs(stage2vars)) |> 
       bind_cols(
         var_matrix(mod_out, stage2vars)
-      ) 
+      )  |>
+      rename_with(compose(rename_lags, rename_diffs))
   })) 
 
 stage2_mods |> 
@@ -285,5 +292,5 @@ stage2_mods |>
   })
 
 
-saveWorkbook(wb_health_wb, "outfiles/reg_health_wellbeing2.xlsx", overwrite = TRUE)
-saveWorkbook(wb_mental_health, "outfiles/reg_health_mental2.xlsx", overwrite = TRUE)
+saveWorkbook(wb_health_wb, "outfiles/reg_health_wellbeing3.xlsx", overwrite = TRUE)
+saveWorkbook(wb_mental_health, "outfiles/reg_health_mental3.xlsx", overwrite = TRUE)

@@ -12,14 +12,17 @@ data <- read_dta('T:/projects/HEED/DataAnalysis/hfcovid_analysis.dta',
                  col_select = c(pidp, hidp, wave,
                                 sex_dv, age_dv, age_sq, hiqual_dv,
                                 scsf1, sclfsato, sf12pcs_dv, sf12mcs_dv, scghq1_dv,
+                                exp_emp, exp_poverty, exp_incchange,
                                 gor_dv,
                                 pidp,
                                 intdaty_dv,
                                 scghq1_dv,
                                 econ_benefits, home_owner, mastat_dv, dnc, ydses_c5, dlltsd,
                                 indscus_lw,
+                                # btype10,
                                 jbstat, fimnlabgrs_dv, fiyrinvinc_dv, econ_poverty, log_income, econ_realequivinc
-                 ))
+                 )) |> 
+  arrange(pidp, wave)
 
 
 codes_translate <- 
@@ -43,6 +46,7 @@ codes_translate <-
 data_ready <- data |> 
   mutate(
     pidp = pidp,
+    wave = wave,
     D_Econ_benefits = econ_benefits,
     D_Home_owner = home_owner,
     Dcpst = as_factor(mastat_dv) |>
@@ -62,13 +66,30 @@ data_ready <- data |>
     Dhm = scghq1_dv,
     Dhe_mcs = sf12mcs_dv,
     Dhe_pcs = sf12pcs_dv,
+    EmployedToUnemployed = as.numeric(exp_emp == 13),
+    UnemployedToEmployed = as.numeric(exp_emp == 31),
+    PersistentUnemployed = as.numeric(exp_emp == 33),
+    NonPovertyToPoverty = as.numeric(exp_poverty == 1),
+    PovertyToNonPoverty = as.numeric(exp_poverty == 2),
+    PersistentPoverty = as.numeric(exp_poverty == 3),
+    # RealIncomeChange = as.numeric(exp_incchange == 1),
+    RealIncomeDecrease_D = exp_incchange,
     weight = indscus_lw,
     les_c4 = case_when(
       jbstat %in% c(1, 2, 5, 12, 13, 14) ~ "Employed or self-employed",
       jbstat == 7 ~ "Student",
       jbstat %in% c(3, 6, 8, 10, 11, 97, 9) ~ "Not employed",
       jbstat == 4 ~ "Retired"
-    )
+    ),
+    Constant = 1,
+    les_c4 = les_c4,
+    econ_poverty = econ_poverty,
+    log_income = log_income,
+    econ_realequivinc = econ_realequivinc,
+    exp_emp = exp_emp,
+    exp_incchange = exp_incchange,
+    exp_poverty =  exp_poverty,
+    .keep = "used"
   ) |> 
   left_join(codes_translate, by = "gor_dv") |> 
   mutate(across(c(Dag, Dgn, Dls, Dhe_mcs, Dhe_pcs, Dhm, Dhe, D_Econ_benefits, Dlltsd, D_Home_owner), zap_labels)) |> 
@@ -80,7 +101,42 @@ data_ready <- data |>
 data_with_dummies <- data_ready |> 
   fastDummies::dummy_cols(select_columns = c("Ydses_c5"), remove_first_dummy = TRUE) |> 
   fastDummies::dummy_cols(select_columns = c("Deh_c3", "Dcpst"), remove_first_dummy = TRUE) |> 
-  fastDummies::dummy_cols(select_columns = c("drgnl"), remove_first_dummy = TRUE, omit_colname_prefix = TRUE) 
+  fastDummies::dummy_cols(select_columns = c("drgnl"), remove_first_dummy = TRUE, omit_colname_prefix = TRUE) |> 
+  select(
+    pidp,
+    wave,
+    Year_transformed,
+    weight,
+    Dgn, 
+    Dnc,
+    starts_with("Ydses", ignore.case = FALSE),
+    Dlltsd,
+    Dag,
+    Dag_sq,
+    Dhe_mcs,
+    Dhe_pcs,
+    Dhm,
+    Dls,
+    EmployedToUnemployed,
+    UnemployedToEmployed,
+    PersistentUnemployed,
+    NonPovertyToPoverty,
+    PovertyToNonPoverty,
+    PersistentPoverty,
+    # RealIncomeChange,
+    RealIncomeDecrease_D,
+    starts_with("UK", ignore.case = FALSE),
+    D_Econ_benefits,
+    D_Home_owner,
+    Dcpst_Single,
+    Dcpst_PreviouslyPartnered,
+    starts_with("Deh", ignore.case = FALSE),
+    -ends_with("NA"),
+    Constant, 
+    les_c4, econ_poverty, log_income, econ_realequivinc,
+    exp_emp, exp_incchange, exp_poverty, scghq1_dv, starts_with("sf12"), sclfsato,
+    sex_dv, age_dv, age_sq
+  ) 
 
 library(dtplyr)
 
@@ -92,26 +148,48 @@ lagged_vars <- c(
 
 lagged_names <- paste0(lagged_vars, "_L1")
 
-data_with_dummies_dt <- as.data.table(data_with_dummies)
+data_with_dummies_dt <- as.data.table(data_with_dummies) |> 
+  panel(~pidp + wave)
 
-data_with_dummies_dt[, (lagged_names) := shift(.SD), by = pidp, .SDcols = lagged_vars]
+data_with_dummies_dt[, (lagged_names) := .(
+  l(Dnc),
+  l(Ydses_c5_Q2),
+  l(Ydses_c5_Q3),
+  l(Ydses_c5_Q4),
+  l(Ydses_c5_Q5),
+  l(Dlltsd),
+  l(Dag),
+  l(Dag_sq),
+  l(Dhe_mcs),
+  l(Dhe_pcs),
+  l(Dhm),
+  l(Dls),
+  l(les_c4),
+  l(econ_poverty),
+  l(log_income),
+  l(econ_realequivinc)
+)]
+
+data_with_dummies_dt[, RealIncomeChange := d(log_income)]
+
+data_in_panel <- copy(data_with_dummies_dt)
 
 data_with_dummies_dt[, `:=`(
   EmployedToUnemployed = as.integer(
     les_c4_L1 ==
       "Employed or self-employed" &
       les_c4 == "Not employed" &
-      dlltsd == 0
+      Dlltsd == 0
   ),
   UnemployedToEmployed = as.integer(
     les_c4_L1 ==
       "Not employed" &
       les_c4 == "Employed or self-employed" &
-      dlltsd == 0
+      Dlltsd == 0
   ),
   PersistentUnemployed = as.integer(les_c4_L1 ==
                                       "Not employed" &
-                                      les_c4 == "Not employed" & dlltsd == 0),
+                                      les_c4 == "Not employed" & Dlltsd == 0),
   NonPovertyToPoverty = as.integer(econ_poverty_L1 == 0 &
                                      econ_poverty ==
                                      1),
@@ -122,9 +200,7 @@ data_with_dummies_dt[, `:=`(
                                    1 &
                                    econ_poverty == 1),
   RealIncomeChange = log_income -
-    log_income_L1,
-  RealIncomeDecrease_D = as.integer(econ_realequivinc <
-                                      econ_realequivinc_L1)
+    log_income_L1
 )]
 
 data_with_dummies_lags <- data_with_dummies_dt |> 
@@ -168,5 +244,5 @@ data_with_dummies_lags <- data_with_dummies_dt |>
     Dcpst_PreviouslyPartnered,
     starts_with("Deh", ignore.case = FALSE),
     -ends_with("NA"),
-  ) |> 
-  mutate(Constant = 1)
+    Constant
+  )
