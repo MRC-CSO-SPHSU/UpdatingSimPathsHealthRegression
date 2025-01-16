@@ -27,15 +27,9 @@ expand_grid(
   walk(\(new_col) {addWorksheet(new_col, wb = wb_mental_health) 
     setColWidths(wb = wb_mental_health, new_col, 1, 30)})
 
-# All baseline
-# library(Formula)
 constant <- "Constant"
 
 baseline <- c(
-  "D_Econ_benefits",
-  "D_Home_owner",
-  "Dcpst_Single",
-  "Dcpst_PreviouslyPartnered",
   "Deh_c3_Medium",
   "Deh_c3_Low"
 )
@@ -61,6 +55,10 @@ age <- c(
 )
 
 lags <- c(
+  "D_Econ_benefits",
+  "D_Home_owner_L1",
+  "Dcpst_Single_L1",
+  "Dcpst_PreviouslyPartnered_L1",
   "Dnc_L1",
   "Ydses_c5_Q2_L1",
   "Ydses_c5_Q3_L1",
@@ -254,9 +252,7 @@ first_mods <- tibble(
     feols(
       mod_form,
       data = data_in_panel,
-      # fixef = "pidp",
       # weights = ~ weight,
-      # panel.id = ~ pidp + wave,
       cluster = ~pidp, se = "cluster",
       subset = as.formula(glue::glue("~Dgn == {sex_grp} & Dag %in% 25:64"))
     )
