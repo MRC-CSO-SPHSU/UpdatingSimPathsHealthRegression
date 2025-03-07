@@ -1,25 +1,33 @@
 library(tidyverse)
 library(haven)
 library(data.table)
+library(fixest)
 
 ## NOTES ## 
 # Check estimate directions make sense
 # Test whether odds between levels are equivalent
 
-# cols <- read_dta('T:/projects/HEED/DataAnalysis/hfcovid_analysis.dta', n_max = 100)
+cols <- read_dta('T:/projects/HEED/DataAnalysis/Daniel\'s working files/heed_analysis.dta', n_max = 100)
+cols <- read_dta('T:/projects/HEED/DataAnalysis/hfcovid_analysis.dta', n_max = 100)
+cols <- read_dta('T:/projects/HEED/Data/USoc prepared data/heed_analysis.dta', n_max = 100)
 
-data <- read_dta('T:/projects/HEED/DataAnalysis/hfcovid_analysis.dta',
-                 col_select = c(pidp, hidp, wave,
-                                sex_dv, age_dv, age_sq, hiqual_dv,
+data <- read_dta('T:/projects/HEED/DataAnalysis/Daniel\'s working files/heed_analysis.dta',
+                 col_select = c(pidp, hidp, wave, sppid,
+                                sex_dv, age_dv,
+                                # age_sq, 
+                                deh_c3,
                                 scsf1, sclfsato, sf12pcs_dv, sf12mcs_dv, scghq1_dv,
                                 exp_emp, exp_poverty, exp_incchange,
+                                lhw,
                                 gor_dv,
-                                pidp,
+                                ethn_dv,
                                 intdaty_dv,
                                 scghq1_dv,
-                                econ_benefits, home_owner, mastat_dv, dnc, ydses_c5, dlltsd,
+                                econ_benefits, econ_benefits_uc, econ_benefits_nonuc,
+                                # home_owner,
+                                hsownd,
+                                dcpst, dnc, ydses_c5, dlltsd,
                                 indscus_lw,
-                                # btype10,
                                 jbstat, fimnlabgrs_dv, fiyrinvinc_dv, econ_poverty, log_income, econ_realequivinc
                  )) |> 
   arrange(pidp, wave)
@@ -30,7 +38,7 @@ codes_translate <-
     ~drgnl, ~gor_dv,
     "UKC", "North East",
     "UKD", "North West",
-    "UKE", "Yorkshire and The Humber",
+    "UKE", "Yorkshire and the Humber",
     "UKF", "East Midlands",
     "UKG", "West Midlands",
     "UKH", "East of England",
@@ -43,24 +51,45 @@ codes_translate <-
   )
 
 
+# cut(
+#     c(0, 5, 15, 25, 35, 45),
+#     c(0, 5, 15, 25, 35, Inf),
+#     right = TRUE,,
+#     labels = c("ZERO", "TEN", "TWENTY", "THIRTY", "FORTY"),
+#     include.lowest = TRUE
+#   )
+
 data_ready <- data |> 
   mutate(
     pidp = pidp,
     wave = wave,
+    hidp = hidp,
+    sppid = sppid,
     D_Econ_benefits = econ_benefits,
-    D_Home_owner = home_owner,
-    Dcpst = as_factor(mastat_dv) |>
-      fct_relabel( ~ str_extract(.x, "(?<=: ).*")) |> 
-      fct_recode(Single = "Single and never married", PreviouslyPartnered = "Previously partnered"),
+    D_Econ_benefits_UC = econ_benefits_uc,
+    D_Econ_benefits_NonUC = econ_benefits_nonuc,
+    D_Home_owner = as.integer(hsownd>=1 & hsownd<=3),
+    # D_Home_owner = home_owner,
+    Dcpst = as_factor(dcpst) |>
+      fct_relabel( ~ str_extract(.x, "(?<=\\. ).*")) |> 
+      fct_recode(Single = "Single never married", PreviouslyPartnered = "Previously partnered"),
     Dnc = dnc,
     Dhe = scsf1,
-    gor_dv = as_factor(gor_dv) |> str_extract("(?<=drgnl: ).*"),
+    Lhw = cut(
+      lhw,
+      c(0, 5, 15, 25, 35, Inf),
+      right = TRUE,,
+      labels = c("ZERO", "TEN", "TWENTY", "THIRTY", "FORTY"),
+      include.lowest = TRUE
+    ),
+    gor_dv = as_factor(gor_dv) |> str_extract("(?<=\\. ).*"),
     Ydses_c5 = factor(ydses_c5) |> fct_relabel(~paste0("Q", .x)),
     Dlltsd = dlltsd,
-    Dgn = sex_dv,
+    Dgn = as.integer(sex_dv == 1),
     Dag = age_dv,
+    age_sq = age_dv^2,
     Dag_sq = age_sq,
-    Deh_c3 = as_factor(hiqual_dv) |> fct_relabel(~str_extract(.x, "(?<=: ).*")),
+    Deh_c3 = as_factor(deh_c3) |> fct_relabel(~str_extract(.x, "(?<=\\. ).*")),
     Year_transformed = intdaty_dv |> zap_labels(),
     Dls = sclfsato,
     Dhm = scghq1_dv,
@@ -89,22 +118,32 @@ data_ready <- data |>
     exp_emp = as_factor(exp_emp),
     exp_incchange = as_factor(exp_incchange),
     exp_poverty = as_factor(exp_poverty),
-    mastat_dv = as_factor(mastat_dv),
+    dcpst = as_factor(dcpst),
     gor_dv = as_factor(gor_dv),
     ydses_c5 = as_factor(ydses_c5),
-    hiqual_dv = as_factor(hiqual_dv),
     .keep = "used"
   ) |> 
   left_join(codes_translate, by = "gor_dv") |> 
-  mutate(across(c(Dag, Dgn, Dls, Dhe_mcs, Dhe_pcs, Dhm, Dhe, D_Econ_benefits, Dlltsd, D_Home_owner), zap_labels)) |> 
+  mutate(across(c(Dag, Dls, Dhe_mcs, Dhe_pcs, Dhm, Dhe, starts_with("D_Econ_benefits"), Dlltsd, D_Home_owner, sppid), zap_labels)) |> 
   mutate(drgnl = relevel(factor(drgnl), ref = "UKI"))
 
-## lagged variables to be used as confounders: econ_benefits, home_owner, mastat_dv, dnc, gor_dv, and outcome measures
+partner_hours <- data_ready |> 
+  select(hidp, pidp, sppid, wave, Lhw) |> 
+  filter(sppid != -8) |> 
+  mutate(Lhwsp = Lhw, sppid = pidp) |> 
+  select(hidp, wave, Lhwsp, sppid) 
+
+data_ready <- left_join(data_ready, partner_hours, by = join_by(sppid == sppid, wave == wave, hidp == hidp)) |> 
+  mutate(Lhwsp = if_else(sppid == -8, "NoPart", Lhwsp))
+
+## lagged variables to be used as confounders: econ_benefits, home_owner, dcpst, dnc, gor_dv, and outcome measures
 
 data_with_dummies <- data_ready |> 
   fastDummies::dummy_cols(select_columns = c("Ydses_c5"), remove_first_dummy = TRUE) |> 
   fastDummies::dummy_cols(select_columns = c("Deh_c3", "Dcpst"), remove_first_dummy = TRUE) |> 
+  fastDummies::dummy_cols(select_columns = c("Lhw", "Lhwsp"), remove_first_dummy = FALSE) |> 
   fastDummies::dummy_cols(select_columns = c("drgnl"), remove_first_dummy = TRUE, omit_colname_prefix = TRUE) |> 
+  mutate(across(starts_with("Lhw_"), ~as.integer(.x * D_Econ_benefits_UC), .names = "D_Econ_benefits_UC_{.col}")) |> 
   select(
     pidp,
     wave,
@@ -130,24 +169,27 @@ data_with_dummies <- data_ready |>
     RealIncomeDecrease_D,
     starts_with("UK", ignore.case = FALSE),
     D_Econ_benefits,
+    starts_with("D_Econ_benefits_UC"),
+    D_Econ_benefits_NonUC,
     D_Home_owner,
     Dcpst_Single,
     Dcpst_PreviouslyPartnered,
     starts_with("Deh", ignore.case = FALSE),
+    starts_with("Lhw"),
     -ends_with("NA"),
     Constant, 
     les_c4, econ_poverty, log_income, econ_realequivinc,
     exp_emp, exp_incchange, exp_poverty, scghq1_dv, starts_with("sf12"), sclfsato,
     sex_dv, age_dv, age_sq,
-    econ_benefits, home_owner, mastat_dv, dnc, sf12pcs_dv,
+    econ_benefits, dcpst, dnc, sf12pcs_dv,
     gor_dv, age_dv, age_sq, ydses_c5,
-    hiqual_dv, sex_dv, intdaty_dv
+    sex_dv, intdaty_dv
   ) 
 
 library(dtplyr)
 
 # econ_benefits_L1 + home_owner_L1 +
-#   mastat_dv_L1 + dnc_L1 + sf12pcs_dv_L1 +
+#   dcpst_L1 + dnc_L1 + sf12pcs_dv_L1 +
 #   gor_dv_L1 + age_dv_L1 + age_sq + ydses_c5_L1 +
 #   scghq1_dv_L1 +
 
@@ -155,6 +197,8 @@ lagged_vars <- c(
   "Dnc", "Ydses_c5_Q2", "Ydses_c5_Q3", "Ydses_c5_Q4", "Ydses_c5_Q5", "Dlltsd", "Dag", "Dag_sq",
   "Dhe_mcs", "Dhe_pcs", "Dhm", "Dls", "D_Home_owner",
   "D_Econ_benefits",
+  "D_Econ_benefits_UC",
+  "D_Econ_benefits_NonUC",
   "Dcpst_Single", "Dcpst_PreviouslyPartnered",
   "les_c4", "econ_poverty", "log_income", "econ_realequivinc",
   "scghq1_dv",
@@ -162,8 +206,7 @@ lagged_vars <- c(
   "exp_incchange",
   "exp_poverty",
   "econ_benefits",
-  "home_owner",
-  "mastat_dv",
+  "dcpst",
   "dnc",
   "sf12pcs_dv",
   "gor_dv",
@@ -192,6 +235,8 @@ data_with_dummies_dt[, (lagged_names) := .(
   l(Dls),
   l(D_Home_owner),
   l(D_Econ_benefits),
+  l(D_Econ_benefits_UC),
+  l(D_Econ_benefits_NonUC),
   l(Dcpst_Single),
   l(Dcpst_PreviouslyPartnered),
   l(les_c4),
@@ -203,8 +248,7 @@ data_with_dummies_dt[, (lagged_names) := .(
   l(exp_incchange),
   l(exp_poverty),
   l(econ_benefits),
-  l(home_owner),
-  l(mastat_dv),
+  l(dcpst),
   l(dnc),
   l(sf12pcs_dv),
   l(gor_dv),
@@ -215,7 +259,8 @@ data_with_dummies_dt[, (lagged_names) := .(
 
 data_with_dummies_dt[, `:=`(RealIncomeChange = d(log_income), D_Econ_benefits = D_Econ_benefits_L1)]
 
-data_in_panel <- copy(data_with_dummies_dt)
+data_in_panel <- copy(data_with_dummies_dt) |> 
+  as_tibble()
 
 data_with_dummies_dt[, `:=`(
   EmployedToUnemployed = as.integer(
@@ -289,3 +334,9 @@ data_with_dummies_lags <- data_with_dummies_dt |>
     -ends_with("NA"),
     Constant
   )
+
+alt_weights <- read_rds("data/cross_wave_weights.rds")[[6]] |> 
+  select(pidp, weight_xw = f_indscui_xw)
+
+panel_xs_weighted <- inner_join(data_in_panel, alt_weights, by = "pidp")
+
