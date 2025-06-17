@@ -27,6 +27,7 @@ data <- read_dta('T:/projects/HEED/DataAnalysis/Daniel\'s working files/heed_ana
                                 # home_owner,
                                 hsownd,
                                 dcpst, dnc, ydses_c5, dlltsd,
+                                dot, finnow,
                                 indscus_lw,
                                 jbstat, fimnlabgrs_dv, fiyrinvinc_dv, econ_poverty, log_income, econ_realequivinc
                  )) |> 
@@ -60,14 +61,15 @@ codes_translate <-
 #   )
 
 data_ready <- data |> 
+  filter(!is.na(dot)) |> 
   mutate(
     pidp = pidp,
     wave = wave,
     hidp = hidp,
     sppid = sppid,
-    D_Econ_benefits = econ_benefits,
-    D_Econ_benefits_UC = econ_benefits_uc,
-    D_Econ_benefits_NonUC = econ_benefits_nonuc,
+    D_Econ_benefits = as.integer(econ_benefits),
+    D_Econ_benefits_UC = as.integer(econ_benefits_uc),
+    D_Econ_benefits_NonUC = as.integer(econ_benefits_nonuc),
     D_Home_owner = as.integer(hsownd>=1 & hsownd<=3),
     # D_Home_owner = home_owner,
     Dcpst = as_factor(dcpst) |>
@@ -84,25 +86,27 @@ data_ready <- data |>
     ),
     gor_dv = as_factor(gor_dv) |> str_extract("(?<=\\. ).*"),
     Ydses_c5 = factor(ydses_c5) |> fct_relabel(~paste0("Q", .x)),
-    Dlltsd = dlltsd,
+    Dlltsd = as.integer(dlltsd),
     Dgn = as.integer(sex_dv == 1),
     Dag = age_dv,
     age_sq = age_dv^2,
     Dag_sq = age_sq,
     Deh_c3 = as_factor(deh_c3) |> fct_relabel(~str_extract(.x, "(?<=\\. ).*")),
-    Year_transformed = intdaty_dv |> zap_labels(),
+    Year_transformed = (intdaty_dv |> zap_labels()) - 2000,
     Dls = sclfsato,
     Dhm = scghq1_dv,
     Dhe_mcs = sf12mcs_dv,
     Dhe_pcs = sf12pcs_dv,
-    EmployedToUnemployed = as.numeric(exp_emp == 13),
-    UnemployedToEmployed = as.numeric(exp_emp == 31),
-    PersistentUnemployed = as.numeric(exp_emp == 33),
-    NonPovertyToPoverty = as.numeric(exp_poverty == 1),
-    PovertyToNonPoverty = as.numeric(exp_poverty == 2),
-    PersistentPoverty = as.numeric(exp_poverty == 3),
+    FinancialDistress = as.integer(zap_label(finnow) %in% 4:5),
+    Ethnicity = as_factor(dot) |> fct_relabel(~str_extract(.x, "^\\w*")),
+    EmployedToUnemployed = as.integer(exp_emp == 13),
+    UnemployedToEmployed = as.integer(exp_emp == 31),
+    PersistentUnemployed = as.integer(exp_emp == 33),
+    NonPovertyToPoverty = as.integer(exp_poverty == 1),
+    PovertyToNonPoverty = as.integer(exp_poverty == 2),
+    PersistentPoverty = as.integer(exp_poverty == 3),
     # RealIncomeChange = as.numeric(exp_incchange == 1),
-    RealIncomeDecrease_D = exp_incchange,
+    RealIncomeDecrease_D = as.integer(exp_incchange),
     weight = indscus_lw,
     les_c4 = case_when(
       jbstat %in% c(1, 2, 5, 12, 13, 14) ~ "Employed or self-employed",
@@ -130,20 +134,22 @@ data_ready <- data |>
 partner_hours <- data_ready |> 
   select(hidp, pidp, sppid, wave, Lhw) |> 
   filter(sppid != -8) |> 
-  mutate(Lhwsp = Lhw, sppid = pidp) |> 
-  select(hidp, wave, Lhwsp, sppid) 
+  mutate(Lhwsp_c6 = Lhw, sppid = pidp) |> 
+  select(hidp, wave, Lhwsp_c6, sppid) 
 
 data_ready <- left_join(data_ready, partner_hours, by = join_by(sppid == sppid, wave == wave, hidp == hidp)) |> 
-  mutate(Lhwsp = if_else(sppid == -8, "NoPart", Lhwsp))
+  mutate(Lhwsp_c6 = if_else(sppid == -8, "NO_PARTNER", Lhwsp_c6))
 
 ## lagged variables to be used as confounders: econ_benefits, home_owner, dcpst, dnc, gor_dv, and outcome measures
 
 data_with_dummies <- data_ready |> 
   fastDummies::dummy_cols(select_columns = c("Ydses_c5"), remove_first_dummy = TRUE) |> 
   fastDummies::dummy_cols(select_columns = c("Deh_c3", "Dcpst"), remove_first_dummy = TRUE) |> 
-  fastDummies::dummy_cols(select_columns = c("Lhw", "Lhwsp"), remove_first_dummy = FALSE) |> 
+  fastDummies::dummy_cols(select_columns = c("Lhw", "Lhwsp_c6", "Ethnicity"), remove_first_dummy = FALSE) |> 
   fastDummies::dummy_cols(select_columns = c("drgnl"), remove_first_dummy = TRUE, omit_colname_prefix = TRUE) |> 
-  mutate(across(starts_with("Lhw_"), ~as.integer(.x * D_Econ_benefits_UC), .names = "D_Econ_benefits_UC_{.col}")) |> 
+  mutate(
+    across(starts_with("Lhw_"), ~as.integer(.x * D_Econ_benefits_UC), .names = "D_Econ_benefits_UC_{.col}")) |> 
+  rename_with(\(eth_col) str_remove(eth_col, "_"), .cols = starts_with("Ethnicity")) |> 
   select(
     pidp,
     wave,
@@ -167,6 +173,7 @@ data_with_dummies <- data_ready |>
     PersistentPoverty,
     # RealIncomeChange,
     RealIncomeDecrease_D,
+    FinancialDistress,
     starts_with("UK", ignore.case = FALSE),
     D_Econ_benefits,
     starts_with("D_Econ_benefits_UC"),
@@ -175,6 +182,7 @@ data_with_dummies <- data_ready |>
     Dcpst_Single,
     Dcpst_PreviouslyPartnered,
     starts_with("Deh", ignore.case = FALSE),
+    starts_with("Ethnicity", ignore.case = FALSE),
     starts_with("Lhw"),
     -ends_with("NA"),
     Constant, 
@@ -325,12 +333,14 @@ data_with_dummies_lags <- data_with_dummies_dt |>
     PersistentPoverty,
     RealIncomeChange,
     RealIncomeDecrease_D,
+    FinancialDistress,
     starts_with("UK", ignore.case = FALSE),
     D_Econ_benefits,
     D_Home_owner,
     Dcpst_Single,
     Dcpst_PreviouslyPartnered,
     starts_with("Deh", ignore.case = FALSE),
+    starts_with("Ethnicity", ignore.case = FALSE),
     -ends_with("NA"),
     Constant
   )

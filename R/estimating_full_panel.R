@@ -4,6 +4,8 @@ library(magrittr)
 library(fixest)
 source("R/import_data.R")
 
+data_in_panel <- panel_xs_weighted
+
 wb_health_wb <- createWorkbook()
 wb_mental_health <- createWorkbook()
 
@@ -91,6 +93,7 @@ lag_vars <- function(...) {
 }
 
 rename_lags <- function(lag_name) str_replace_all(lag_name, "l\\((\\w*).*\\)", "\\1_L1")
+rename_interactions <- function(interaction_name) str_replace_all(interaction_name, ":", "_")
 rename_diffs <- function(diff_name) str_replace_all(diff_name, "d\\((\\w*).*\\)", "\\1") |> str_replace("log_income", "RealIncomeChange")
 
 mcs_controls <- lag_vars(age, mcs, pcs)
@@ -165,8 +168,9 @@ stage1_mods <- tibble(
     feols(
       mod_form,
       data = data_in_panel,
-      cluster = ~pidp, se = "cluster"
-      # weights = ~ weight,
+      cluster = ~pidp,
+      se = "cluster",
+      weights = ~ weight_xw,
     )
   }),
   out_table = map(model, \(mod_out) {
@@ -252,7 +256,7 @@ first_mods <- tibble(
     feols(
       mod_form,
       data = data_in_panel,
-      # weights = ~ weight,
+      weights = ~ weight_xw,
       cluster = ~pidp, se = "cluster",
       subset = as.formula(glue::glue("~Dgn == {sex_grp} & Dag %in% 25:64"))
     )
@@ -261,6 +265,7 @@ first_mods <- tibble(
 stage2_mods <- first_mods |> 
   mutate(
     out_table = map(model, \(mod_out) {
+      
       broom::tidy(mod_out) |>
         mutate(REGRESSOR = rename_lags(term) |> rename_diffs(),
                COEFFICIENT = estimate,
@@ -281,7 +286,7 @@ stage2_mods |>
   })
 
 
-saveWorkbook(wb_health_wb, "outfiles/reg_health_wellbeing4.xlsx", overwrite = TRUE)
-saveWorkbook(wb_mental_health, "outfiles/reg_health_mental4.xlsx", overwrite = TRUE)
+saveWorkbook(wb_health_wb, "outfiles/reg_health_wellbeing_xw.xlsx", overwrite = TRUE)
+saveWorkbook(wb_mental_health, "outfiles/reg_health_mental_xw.xlsx", overwrite = TRUE)
 
 
