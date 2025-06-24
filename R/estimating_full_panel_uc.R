@@ -53,11 +53,11 @@ baseline <- c(
 sex <- "Dgn"
 
 ethnicity <- c(
-  # "EthnicityBlack",
-  # "EthnicityAsian",
-  # "EthnicityMixed",
-  # "EthnicityOther"
-  "EthnicityWhite"
+  "EthnicityBlack",
+  "EthnicityAsian",
+  "EthnicityMixed",
+  "EthnicityOther"
+  # "EthnicityWhite"
 )
 
 places <-
@@ -100,6 +100,7 @@ stage2vars <- c(
   "PersistentPoverty",
   "RealIncomeChange",
   "FinancialDistress",
+  "RealIncomeDecrease_D",
   "D_Econ_benefits_UC_Lhw_ZERO",
   "D_Econ_benefits_UC_Lhw_TEN",
   "D_Econ_benefits_UC_Lhw_TWENTY",
@@ -110,8 +111,7 @@ stage2vars <- c(
   "Lhwsp_c6_TEN",
   "Lhwsp_c6_TWENTY",
   "Lhwsp_c6_THIRTY",
-  "Lhwsp_c6_FORTY",
-  "RealIncomeDecrease_D")
+  "Lhwsp_c6_FORTY")
 
 stage2 <- paste(stage2vars, collapse = " + ")
 
@@ -140,7 +140,6 @@ common_vars <-
     paste(baseline, collapse = " + "), 
     paste(places, collapse = " + "), 
     paste(ethnicity, collapse = " + "),
-    # "Ethnicity",
     paste(lags, collapse = " + "),
     time,
     sep = " + "
